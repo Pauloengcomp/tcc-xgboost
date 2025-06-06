@@ -1,0 +1,134 @@
+!pip install dbfread pandas scikit-learn xgboost
+!pip install --upgrade pysus
+from pysus.online_data import SIM
+import pandas as pd
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+import xgboost as xgb
+
+# Baixando o grupo CID10 da Bahia em 2023
+arquivos = SIM.download(groups=["cid10"], states='BA', years=2023)
+
+# Conferindo o que foi baixado
+print(arquivos)
+
+# Convertendo para DataFrame
+df = arquivos.to_dataframe()
+
+# Visualizando as primeiras linhas
+df.head()
+
+df_model = df[['SEXO', 'IDADE', 'CAUSABAS']].copy()
+
+df_model = df_model.dropna()
+
+from sklearn.preprocessing import LabelEncoder
+
+le_sexo = LabelEncoder()
+le_causa = LabelEncoder()
+
+df_model['SEXO'] = le_sexo.fit_transform(df_model['SEXO'].astype(str))
+df_model['CAUSABAS'] = le_causa.fit_transform(df_model['CAUSABAS'].astype(str))
+
+X = df_model[['SEXO', 'IDADE']]
+y = df_model['CAUSABAS']
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Converter para numérico
+df_model['SEXO'] = pd.to_numeric(df_model['SEXO'], errors='coerce')
+df_model['IDADE'] = pd.to_numeric(df_model['IDADE'], errors='coerce')
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Converter para numérico
+df_model['SEXO'] = pd.to_numeric(df_model['SEXO'], errors='coerce')
+df_model['IDADE'] = pd.to_numeric(df_model['IDADE'], errors='coerce')
+
+print(df_model.dtypes)
+
+X = df_model[['SEXO', 'IDADE']]
+y = df_model['CAUSABAS']
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+dtrain = xgb.DMatrix(X_train, label=y_train)
+dtest = xgb.DMatrix(X_test, label=y_test)
+
+print("Contagem absoluta por classe:")
+print(df_model['CAUSABAS'].value_counts())
+
+print("\nProporção relativa por classe:")
+print(df_model['CAUSABAS'].value_counts(normalize=True) * 100)
+
+# Contagem de ocorrências por classe
+counts = df_model['CAUSABAS'].value_counts()
+
+# Definindo classes raras
+rare_classes = counts[counts < 50].index
+
+# Agrupando classes raras como 'Outros'
+df_model['CAUSABAS'] = df_model['CAUSABAS'].apply(
+    lambda x: 'Outros' if x in rare_classes else x
+)
+print(df_model['CAUSABAS'].value_counts())
+
+from sklearn.preprocessing import LabelEncoder
+
+le_causa = LabelEncoder()
+df_model['CAUSABAS'] = le_causa.fit_transform(df_model['CAUSABAS'].astype(str))
+
+X = df_model[['SEXO', 'IDADE']]
+y = df_model['CAUSABAS']
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+import xgboost as xgb
+
+dtrain = xgb.DMatrix(X_train, label=y_train)
+dtest = xgb.DMatrix(X_test, label=y_test)
+
+import numpy as np
+
+params = {
+    'objective': 'multi:softmax',               # multiclasse
+    'num_class': len(np.unique(y)),             # número de classes
+    'max_depth': 6,                             # profundidade da árvore
+    'eta': 0.3,                                 # taxa de aprendizado
+    'eval_metric': 'mlogloss'                   # métrica de avaliação
+}
+
+num_round = 100  # Pode reduzir se quiser testar rápido: num_round = 10
+
+bst = xgb.train(params, dtrain, num_round)
+
+
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+# Fazer previsões
+y_pred = bst.predict(dtest)
+
+# Avaliar
+print("Acurácia:", accuracy_score(y_test, y_pred))
+
+print("\nRelatório de Classificação:\n", classification_report(y_test, y_pred))
+
+print("\nMatriz de Confusão:\n", confusion_matrix(y_test, y_pred))
